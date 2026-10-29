@@ -1,0 +1,39 @@
+name: Build Windows
+
+on:
+  workflow_dispatch:   # lets you start it with a button in the Actions tab
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # Creates the windows/ runner folder if it was not uploaded.
+      # Existing files (lib/, pubspec.yaml) are not overwritten.
+      - name: Create Windows platform files
+        run: flutter create --platforms=windows --project-name smscut .
+
+      - name: Set window title
+        shell: pwsh
+        run: |
+          (Get-Content windows/runner/main.cpp) -replace 'L"smscut"', 'L"SMSCut"' | Set-Content windows/runner/main.cpp
+
+      - name: Install packages
+        run: flutter pub get
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Upload the app
+        uses: actions/upload-artifact@v4
+        with:
+          name: SMSCut-windows
+          path: build/windows/x64/runner/Release/
